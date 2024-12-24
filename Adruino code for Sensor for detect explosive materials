@@ -1,0 +1,110 @@
+#include <Wire.h>
+#include <Adafruit_SSD1306.h>
+#include <Adafruit_Sensor.h>
+#include <DHT.h>
+#include <DHT_U.h>
+
+// OLED display settings
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
+
+// Sensor pins
+#define MQ2_PIN A0
+#define DHT_PIN 2
+#define DHT_TYPE DHT11
+#define IR_PIN 3
+#define TRIG_PIN 4
+#define ECHO_PIN 5
+#define CAPACITIVE_PIN A1
+#define INDUCTIVE_PIN A2
+
+// Initialize sensors
+DHT dht(DHT_PIN, DHT_TYPE);
+
+void setup() {
+  // Initialize serial communication
+  Serial.begin(9600);
+
+  // Initialize OLED
+  if (!display.begin(SSD1306_I2C_ADDRESS, 0x3C)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for (;;);
+  }
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(SSD1306_WHITE);
+
+  // Initialize sensors
+  dht.begin();
+  pinMode(IR_PIN, INPUT);
+  pinMode(TRIG_PIN, OUTPUT);
+  pinMode(ECHO_PIN, INPUT);
+  pinMode(CAPACITIVE_PIN, INPUT);
+  pinMode(INDUCTIVE_PIN, INPUT);
+}
+
+void loop() {
+  // Read sensor values
+  float mq2Value = analogRead(MQ2_PIN);
+  float capacitiveValue = analogRead(CAPACITIVE_PIN);
+  float inductiveValue = analogRead(INDUCTIVE_PIN);
+  float temperature = dht.readTemperature();
+  float humidity = dht.readHumidity();
+  int irValue = digitalRead(IR_PIN);
+  float distance = getUltrasonicDistance();
+
+  // Display data on OLED
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print(F("MQ-2: "));
+  display.print(mq2Value);
+  display.println(F(" ppm"));
+
+  display.print(F("Temp: "));
+  display.print(temperature);
+  display.println(F(" C"));
+
+  display.print(F("Humidity: "));
+  display.print(humidity);
+  display.println(F(" %"));
+
+  display.print(F("IR Sensor: "));
+  display.println(irValue == HIGH ? "Obstacle" : "Clear");
+
+  display.print(F("Ultrasonic: "));
+  display.print(distance);
+  display.println(F(" cm"));
+
+  display.print(F("Capacitive: "));
+  display.println(capacitiveValue);
+
+  display.print(F("Inductive: "));
+  display.println(inductiveValue);
+
+  display.display();
+
+  // Cross-verification logic
+  if (irValue == HIGH || distance < 10.0) {
+    if (capacitiveValue > 500 && inductiveValue < 500) {
+      Serial.println(F("Metal detected with proximity"));
+    } else {
+      Serial.println(F("Obstacle detected but not metallic"));
+    }
+  }
+
+  // Wait before next reading
+  delay(1000);
+}
+
+float getUltrasonicDistance() {
+  digitalWrite(TRIG_PIN, LOW);
+  delayMicroseconds(2);
+  digitalWrite(TRIG_PIN, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(TRIG_PIN, LOW);
+
+  long duration = pulseIn(ECHO_PIN, HIGH);
+  float distance = duration * 0.034 / 2;
+  return distance;
+}
