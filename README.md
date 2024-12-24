@@ -10,4 +10,4 @@ There is an urgent need for innovative solutions to prevent such tragedies
 and ensure public safety through proactive measures.
 Leveraging advanced robotics, we aim to create a reliable solution that
 detects, diffuses, and disposes of explosives, fostering a safer and more
-secure environment for all
+secure environment for all.
